@@ -12,6 +12,7 @@ import seaborn as sns
 from scipy.optimize import curve_fit
 from errors import error_prop, deriv, covar_to_corr
 
+
 def read_and_clean_data(filepath, missing_threshold=0.5):
     """
     Function will clean and read the data in WorldBank format
@@ -29,19 +30,20 @@ def read_and_clean_data(filepath, missing_threshold=0.5):
     
     df = pd.read_csv(filepath)
     
-    # Drop unnecessary columns that wont be used
+    #drop unnecessary columns that wont be used
     df = df.drop(columns=['Country Code', 'Indicator Code'])
 
-    # some rows have too many missing values so drop these
+    #some rows have too many missing values so drop these
     df = df.dropna(thresh=int((1 - missing_threshold) * len(df.columns)))
 
-    # Reset index for safety
+    #reset index for safety
     df = df.reset_index(drop=True)
 
-    # Copy for clustering
+    #copy the dataframe for clustering
     cluster_df = df.copy()
 
     return df, cluster_df
+
 
 forest_area, _ = read_and_clean_data('forest_land_percentage.csv')
 agri_land, _ = read_and_clean_data('agriculture_land_percentage.csv')
@@ -61,11 +63,11 @@ years = [1980, 2000, 2020]
 #filtering the forest area dataframe
 filtered_df = combined_df[combined_df['Indicator Name'].isin(indicators)]
 
-# Melt to long format for easy filtering
+#melt to long format for easy filtering
 long_df = filtered_df.melt(
-    id_vars=['Country Name', 'Indicator Name'],
-    var_name='Year',
-    value_name='Value'
+    id_vars = ['Country Name', 'Indicator Name'],
+    var_name = 'Year',
+    value_name = 'Value'
 )
 
 #cleaning the columns
@@ -74,9 +76,9 @@ long_df = long_df[long_df['Year'].isin(map(str, years))]
 
 #pivot so each row = country, columns = indicator_year
 pivot_df = long_df.pivot_table(
-    index='Country Name',
-    columns=['Indicator Name', 'Year'],
-    values='Value'
+    index = 'Country Name',
+    columns = ['Indicator Name', 'Year'],
+    values = 'Value'
 )
 
 #flatten columns
@@ -92,8 +94,8 @@ original_data = pivot_df.copy()
 scaler = StandardScaler()
 normalized_data = pd.DataFrame(
     scaler.fit_transform(pivot_df),
-    index=pivot_df.index,
-    columns=pivot_df.columns
+    index = pivot_df.index,
+    columns = pivot_df.columns
 )
 
 #doing the K-means Clustering
@@ -102,6 +104,11 @@ from sklearn.cluster import KMeans
 #starting with 3 clusters
 kmeans = KMeans(n_clusters=3, random_state=42)
 cluster_labels = kmeans.fit_predict(normalized_data)
+
+#calculating silhouette score
+from sklearn.metrics import silhouette_score
+sil_score = silhouette_score(normalized_data, cluster_labels)
+print('Running silhouette score is - ', sil_score)
 
 original_data['Cluster'] = cluster_labels
 # Mapping cluster numbers to descriptive labels
@@ -137,20 +144,20 @@ pca_cluster_centers = pca.transform(kmeans.cluster_centers_)
 plt.figure(figsize=(10, 6))
 sns.scatterplot(x=pca_components[:, 0], 
                 y=pca_components[:, 1],
-                hue=original_data['Cluster Label'], palette='Set2', s=100)
+                hue=original_data['Cluster Label'], palette = 'Set2', s = 100)
 
 plt.scatter(
     pca_cluster_centers[:,0],
     pca_cluster_centers[:,1],
     c='black',
-    s=100,
-    marker='X',
-    label='Cluster Centers'
+    s = 100,
+    marker = 'X',
+    label = 'Cluster Centers'
 )
 plt.title('Country Clusters + Centers based on Land Use & Urban Growth)')
 plt.xlabel('PCA 1 (Land Use & Urbanization Pattern)')
 plt.ylabel('PCA 2')
-plt.legend(title='Cluster Description', loc='best')
+plt.legend(title = 'Cluster Description', loc = 'best')
 plt.grid(True)
 plt.tight_layout()
 plt.show()
@@ -158,13 +165,13 @@ plt.show()
 
 #showing back-transformed cluster centers
 original_centers = scaler.inverse_transform(kmeans.cluster_centers_)
-cluster_means = original_data.groupby('Cluster').mean(numeric_only=True)
+cluster_means = original_data.groupby('Cluster').mean(numeric_only = True)
 pd.set_option('display.max_columns', None)  # So it doesn't cut off
 print(cluster_means)
 
 cluster_centers_df = pd.DataFrame(
     original_centers,
-    columns=pivot_df.columns
+    columns = pivot_df.columns
 )
 cluster_centers_df['Cluster Label'] = [cluster_labels_map[i] for i in range(kmeans.n_clusters)]
 
@@ -174,13 +181,13 @@ print(cluster_centers_df.round(2))
 # Show mean of each indicator by Cluster Label (original, non-normalized data)
 cluster_summary = original_data.groupby('Cluster Label').mean(numeric_only=True)
 
-# Round for readability
+#Round for readability
 cluster_summary = cluster_summary.round(2)
 
 # Print the summary
 pd.set_option('display.max_columns', None)
 print(cluster_summary)
-# Transpose so indicators are on x-axis
+#Transpose so indicators are on x-axis
 transposed = cluster_summary.T
 
 
@@ -193,9 +200,9 @@ countries = ['Indonesia','Israel', 'United Kingdom']
 indicator = 'Urban population growth (annual %)'
 
 #Setup plot
-plt.figure(figsize=(14, 8))
+plt.figure(figsize = (14, 8))
 
-# Color palette for visual distinction
+#Color palette for visual distinction
 colors = ['red', 'green', 'blue']
 
 #loop through each country of choice
@@ -231,11 +238,11 @@ for i, country in enumerate(countries):
 
 
     #plot the observed data
-    plt.plot(x,y,'o', label=f"{country} Data", color=colors[i])
+    plt.plot(x, y,'o', label=f"{country} Data", color=colors[i])
     #plot best-fit curve
-    plt.plot(x_future + x[0], forecast, '-', color=colors[i], label=f"{country} Fit")
+    plt.plot(x_future + x[0], forecast, '-', color=colors[i], label = f"{country} Fit")
     #plot confidence range
-    plt.fill_between(x_future + x[0], lower_forecast, upper_forecast, color=colors[i], alpha=0.2)
+    plt.fill_between(x_future + x[0], lower_forecast, upper_forecast, color = colors[i], alpha = 0.2)
 
 #final plot formatting
 plt.xlabel('Year')
